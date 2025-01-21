@@ -1,0 +1,21 @@
+eda
+- One product was purchased in a large quantity, purchasing 21 of the same product in the same order. This is shown as the max value in order_item_id is 21, suggesting that there was a specific product that was purchased 21 times in the same order. This may be an important product that needs to be investigated in the EDA.
+- There is an anomalously long product_description_lenght entry with 3992 characters. This may be using many different tags to push the product in search results. This may be investigated in the EDA.
+- There are products which have anomalously high product_photos_qty (20). More pictures may improve customer satisfaction with the product ordered as they may be more aware of what the product will look like. This may be investigated in the EDA.
+
+geolocations
+- **Inconsistent Use of Diacritics**: Some city values in the dataset are spelt without the diacritics and some are spelt with it. For example, there are values of 'sao bras' and 'sao brás'. Must be standardised in data cleaning.
+- **Potential Encoding Errors**: 'Maceió' is spelled as 'maceia³'. The superscript 3 and change from 'o' to 'a' is likely caused by an encoding error. Standardised in data cleaning.
+
+products df
+- These entries/rows will need to be imputed as product_description_lenght may be used in the EDA and modelling as the use of longer text and tags may affect online search results.
+- These entries can be imputed as they are only 1.85% of the dataset, which is small and negligible.
+
+- The 2nd row in the dataset shown directly above must be dropped as it does not contain any information of the product and theres not enough contextual information in the other columns to impute it accurately.
+- The first row's product_weight_g, product_length_cm, product_height_cm, and product_width_cm can be imputed as well using the data in the other fields. It can be imputed as it is only 1 row of the entire dataset.
+order dataset
+- While erroneous, these entries/rows identified above should not be dropped as the other fields may be used in EDA or modeling.
+- Instead, these 3 fields should be dropped as the date of the approval should not affect the EDA or the modelling process as they are not critical to determining the potential for customers to return.
+
+reviews comments titles
+- These features are likely not important for EDA and modeling for determining if customers will return. Furthermore, they have a substantial number of null entries (>50%), which thus cannot be imputed. Hence, they will be dropped in feature selection. 
