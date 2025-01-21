@@ -2,12 +2,15 @@ eda
 - One product was purchased in a large quantity, purchasing 21 of the same product in the same order. This is shown as the max value in order_item_id is 21, suggesting that there was a specific product that was purchased 21 times in the same order. This may be an important product that needs to be investigated in the EDA.
 - There is an anomalously long product_description_lenght entry with 3992 characters. This may be using many different tags to push the product in search results. This may be investigated in the EDA.
 - There are products which have anomalously high product_photos_qty (20). More pictures may improve customer satisfaction with the product ordered as they may be more aware of what the product will look like. This may be investigated in the EDA.
+- These orders with repeated purchasing of the same product may provide valuable insight into the types of products that need to be ordered in bulk/large quantities, suggesting a product that needs to be constantly purchased.
+
 
 geolocations
-- **Inconsistent Use of Diacritics**: Some city values in the dataset are spelt without the diacritics and some are spelt with it. For example, there are values of 'sao bras' and 'sao brás'. Must be standardised in data cleaning.
-- **Potential Encoding Errors**: 'Maceió' is spelled as 'maceia³'. The superscript 3 and change from 'o' to 'a' is likely caused by an encoding error. Standardised in data cleaning.
 - There are 42 entries which are outside of Brazil's longitude and lattitude. They are data entry errors that need to be dropped.
 - **Inconsistent Spelling**: Some zip codes have different spellings for the city such as itabata, itabatan, mucuri which refer to the same city. These need to be normalized by aggregating it and using the mode of the city for that zip code.
+- **Inconsistent Use of Diacritics**: Some city values in the dataset are spelt without the diacritics and some are spelt with it. For example, there are values of 'sao bras' and 'sao brás'. Must be standardised in data cleaning.
+- There are cities which have encoding errors in the geolocation_city field. These need to be converted to the standard name of the cities in data cleaning.
+
 products df
 - Drop rows of products without any information in them.
 - Impute missing entries in the products dataset.
@@ -18,7 +21,11 @@ products df
 
 order dataset
 - Drop the order_approved_at and order_delivered_carrier_date fields as they contain missing values and they may not be important for EDA and modeling.
-- The order_delivered_customer_date field cannot be dropped, however, as it may give insights into whether the timeliness of the delivery impacts whether customers return. Instead, feature engineering should be conducted to create a new column that represents the difference in date in which the product was received. 
+- The order_delivered_customer_date field cannot be dropped as it may give insights into whether the timeliness of the delivery impacts whether customers return. Instead, feature engineering should be conducted to create a new column that represents the difference in date in which the product was received. 
 
-reviews comments titles
+reviews
 - Drop the fields review_comment_title and review_comment_message as they have a substantial proportion (>50%) of missing values that cannot be imputed effectively.
+
+payments dataset
+- There are 2 orders which are missing payments which need to be imputed.
+- There are 78 orders with erroneous payment_sequential values that need to be corrected.
