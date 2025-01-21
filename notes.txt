@@ -6,16 +6,19 @@ eda
 geolocations
 - **Inconsistent Use of Diacritics**: Some city values in the dataset are spelt without the diacritics and some are spelt with it. For example, there are values of 'sao bras' and 'sao brás'. Must be standardised in data cleaning.
 - **Potential Encoding Errors**: 'Maceió' is spelled as 'maceia³'. The superscript 3 and change from 'o' to 'a' is likely caused by an encoding error. Standardised in data cleaning.
-
+- There are 42 entries which are outside of Brazil's longitude and lattitude. They are data entry errors that need to be dropped.
+- **Inconsistent Spelling**: Some zip codes have different spellings for the city such as itabata, itabatan, mucuri which refer to the same city. These need to be normalized by aggregating it and using the mode of the city for that zip code.
 products df
-- These entries/rows will need to be imputed as product_description_lenght may be used in the EDA and modelling as the use of longer text and tags may affect online search results.
-- These entries can be imputed as they are only 1.85% of the dataset, which is small and negligible.
+- Drop rows of products without any information in them.
+- Impute missing entries in the products dataset.
 
 - The 2nd row in the dataset shown directly above must be dropped as it does not contain any information of the product and theres not enough contextual information in the other columns to impute it accurately.
 - The first row's product_weight_g, product_length_cm, product_height_cm, and product_width_cm can be imputed as well using the data in the other fields. It can be imputed as it is only 1 row of the entire dataset.
+
+
 order dataset
-- While erroneous, these entries/rows identified above should not be dropped as the other fields may be used in EDA or modeling.
-- Instead, these 3 fields should be dropped as the date of the approval should not affect the EDA or the modelling process as they are not critical to determining the potential for customers to return.
+- Drop the order_approved_at and order_delivered_carrier_date fields as they contain missing values and they may not be important for EDA and modeling.
+- The order_delivered_customer_date field cannot be dropped, however, as it may give insights into whether the timeliness of the delivery impacts whether customers return. Instead, feature engineering should be conducted to create a new column that represents the difference in date in which the product was received. 
 
 reviews comments titles
-- These features are likely not important for EDA and modeling for determining if customers will return. Furthermore, they have a substantial number of null entries (>50%), which thus cannot be imputed. Hence, they will be dropped in feature selection. 
+- Drop the fields review_comment_title and review_comment_message as they have a substantial proportion (>50%) of missing values that cannot be imputed effectively.

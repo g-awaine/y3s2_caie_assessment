@@ -1,0 +1,20 @@
+Metadata-Version: 2.2
+Name: y3s2_caie_assessment
+Version: 0.1
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: ipython>=8.10
+Requires-Dist: jupyterlab>=3.0
+Requires-Dist: notebook
+Requires-Dist: kedro~=0.19.10
+
+# Associate AI Engineer Technical Test
+
+[![Powered by Kedro](https://img.shields.io/badge/powered_by-kedro-ffc900?logo=kedro)](https://kedro.org)
+
+## My Personal Information
+Name:   Gawain Yeo-Koh Jin Hng
+Email:  gawainyeokoh@gmail.com
+
+## Overview
+

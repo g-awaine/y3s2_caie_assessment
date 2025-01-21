@@ -1,0 +1,2 @@
+[console_scripts]
+y3s2-caie-assessment = y3s2_caie_assessment.__main__:main
