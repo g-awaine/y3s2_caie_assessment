@@ -8,13 +8,41 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
-def drop_rows_conditional(df: pd.DataFrame, conditions: dict) -> pd.DataFrame:
+def drop_duplicate(df: pd.DataFrame, subset: List[str] = None) -> pd.DataFrame:
     """
-    Removes rows from the DataFrame that do not match the specified conditions.
+    Removes duplicate entries in the dataset
 
     Args:
         df (pd.DataFrame): The input DataFrame.
-        conditions (dict): A dictionary where keys are column names and values are the conditions.
+        subset (List[str]): List of column labels to consider for identifying duplicates.
+
+    Returns:
+        pd.DataFrame: The DataFrame with duplicates dropped.
+    """
+    try:
+        # Check if columns exist in the DataFrame
+        missing_columns = [col for col in subset if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Columns not found in the DataFrame: {', '.join(missing_columns)}")
+
+        return df.drop_duplicates(subset=subset, keep='first', inplace=False, ignore_index=False)
+
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
+        return df
+    
+    except Exception as e:
+        print(f"An unexpected error occurred in dropping duplicates: {e}")
+        return df
+
+
+def drop_rows_lat_lng(df: pd.DataFrame, lat_lng_conditions: dict) -> pd.DataFrame:
+    """
+    Removes rows from the DataFrame that do not match the specified conditions for the latitude and longitude.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        lat_lng_conditions (dict): A dictionary containing the minimum and maximum lat and lng values.
 
     Returns:
         pd.DataFrame: The DataFrame with rows matching the conditions removed.
@@ -22,7 +50,15 @@ def drop_rows_conditional(df: pd.DataFrame, conditions: dict) -> pd.DataFrame:
     try:
         # Initialize the mask for rows to keep
         mask = pd.Series(True, index=df.index)
-        
+        lat_condition = lat_lng_conditions["geolocation_lat"]
+        lng_condition = lat_lng_conditions["geolocation_lng"]
+
+        # Create the conditions
+        conditions = {
+            'geolocation_lat': lambda x: lat_condition['min'] < x < lat_condition['max'],
+            'geolocation_lng': lambda x: lng_condition['min'] < x < lng_condition['max']
+        }
+
         for column, condition in conditions.items():
             # Apply the condition and remove rows which do not meet the condition
             mask &= df[column].apply(condition)
@@ -34,8 +70,29 @@ def drop_rows_conditional(df: pd.DataFrame, conditions: dict) -> pd.DataFrame:
         # Showcase the error
         print(f"An unexpected error occurred: {e}")
         return df
+    
+def drop_erroneous_orders(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes orders that were considered delivered but do not have a customer delivered date.
 
-def drop_rows_missing_values(df: pd.DataFrame, subset: List[str], how: str) -> pd.DataFrame:
+    Args:
+        df (pd.DataFrame): The input orders DataFrame.
+
+    Returns:
+        pd.DataFrame: The DataFrame without the erroneous orders.
+    """
+    try:
+        # Filters out the erroneous orders
+        df = df[(df['order_status'] == 'delivered') & (pd.isna(df['order_delivered_customer_date']))]
+        return df
+    
+    except Exception as e:
+        print(f"An unexpected error occurred when dropping erroneous orders: {e}")
+        return df
+
+
+
+def drop_rows_missing_values(df: pd.DataFrame, subset: List[str] = None, how: str = 'any') -> pd.DataFrame:
     """
     Removes rows from the DataFrame that have missing values.
 
@@ -107,6 +164,13 @@ def aggregate_by_column(df: pd.DataFrame, column: str, agg: dict) -> pd.DataFram
         if is_column_missing:
             raise ValueError(f"Column not found in the DataFrame")
         
+        # Convert mode to the lambda callable for the aggregation function
+        for field, aggregation in agg.items():
+            if aggregation == 'mode':
+                agg[field] = lambda x: x.mode().iloc[0]
+            else:
+                agg[field] = aggregation
+                
         # Aggregate the input DataFrame by the specified column
         aggregated_df = df.groupby(column).agg(agg)
 
@@ -121,7 +185,120 @@ def aggregate_by_column(df: pd.DataFrame, column: str, agg: dict) -> pd.DataFram
         # Show the error
         print(f"An unexpected error occurred: {e}")
         return df
+ 
+
+def cross_reference_cities(
+    df: pd.DataFrame, ssot_city_df: pd.DataFrame, mapping: Dict[str, str]
+) -> pd.DataFrame:
+    """
+    Cross-references the input DataFrame with a single source of truth (SSOT) DataFrame 
+    containing Brazilian zip codes and cities.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        ssot_city_df (pd.DataFrame): The SSOT DataFrame containing Brazilian zip codes and cities.
+        mapping (Dict[str, str]): Maps the column name of the zip code and city in the datasets.
+            zip_code (str): The column name in df representing the zip code.
+            city (str): The column name in df representing the city name.
+            true_zip_code (str): The column name in ssot_city_df representing the zip code in ssot_city_df.
+            true_city (str): The column name in ssot_city_df representing the true city name.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame with consistent city and zip codes.
+    """
+    # Extract the column mappings
+    zip_code = mapping.get('zip_code')
+    city = mapping.get('city')
+    true_zip_code = mapping.get('true_zip_code')
+    true_city = mapping.get('true_city')
+
+    # Initialise an updated DataFrame
+    updated_df = df.copy()
+
+    try:
+        # Check if required columns exist in the DataFrames
+        missing_columns_df = [col for col in [zip_code, city] if col not in df.columns]
+        missing_columns_ssot = [col for col in [true_zip_code, true_city] if col not in ssot_city_df.columns]
+
+        if missing_columns_df:
+            raise ValueError(f"Columns missing in input DataFrame: {', '.join(missing_columns_df)}")
+        if missing_columns_ssot:
+            raise ValueError(f"Columns missing in SSOT DataFrame: {', '.join(missing_columns_ssot)}")
+
+        # Create a lookup DataFrame for mode (most frequent) values based on `zip_code`
+        ssot_lookup = ssot_city_df.groupby(true_zip_code)[true_city] \
+            .agg(lambda x: x.mode()[0] if not x.empty else None)
+
+        # Update inconsistent city and zip codes in the original DataFrame
+        updated_df[city] = df[zip_code].apply(lambda x: ssot_lookup.loc[x] if x in ssot_lookup.index else x)
+
+        return updated_df
+
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
+        return df
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return df
+
+
+def cross_reference_cities(
+    df: pd.DataFrame, ssot_city_df: pd.DataFrame, mapping: Dict[str, str]
+) -> pd.DataFrame:
+    """
+    Cross-references the input DataFrame with a single source of truth (SSOT) DataFrame 
+    containing Brazilian zip codes and cities.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        ssot_city_df (pd.DataFrame): The SSOT DataFrame containing Brazilian zip codes and cities.
+        mapping (Dict[str, str]): Maps the column name of the zip code and city in the datasets.
+            zip_code (str): The column name in df representing the zip code.
+            city (str): The column name in df representing the city name.
+            true_zip_code (str): The column name in ssot_city_df representing the zip code in ssot_city_df.
+            true_city (str): The column name in ssot_city_df representing the true city name.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame with consistent city and zip codes.
+    """
+    # Extract the column mappings
+    zip_code = mapping.get('zip_code')
+    city = mapping.get('city')
+    true_zip_code = mapping.get('true_zip_code')
+    true_city = mapping.get('true_city')
+
+    # Initialise an updated DataFrame
+    updated_df = df.copy()
+
+    try:
+        # Check if required columns exist in the DataFrames
+        missing_columns_df = [col for col in [zip_code, city] if col not in df.columns]
+        missing_columns_ssot = [col for col in [true_zip_code, true_city] if col not in ssot_city_df.columns]
+
+        if missing_columns_df:
+            raise ValueError(f"Columns missing in input DataFrame: {', '.join(missing_columns_df)}")
+        if missing_columns_ssot:
+            raise ValueError(f"Columns missing in SSOT DataFrame: {', '.join(missing_columns_ssot)}")
+
+        # Create a lookup DataFrame for mode (most frequent) values based on `zip_code`
+        ssot_lookup = ssot_city_df.groupby(true_zip_code)[true_city] \
+            .agg(lambda x: x.mode()[0] if not x.empty else None)
+
+        # Update inconsistent city and zip codes in the original DataFrame
+        updated_df[city] = df[zip_code].apply(lambda x: ssot_lookup.loc[x] if x in ssot_lookup.index else x)
+
+        return updated_df
+
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
+        return df
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return df
     
+
 def replace_diacritics(text: str) -> str:
     """
     Replaces diacritics with standard alphabets.
@@ -150,34 +327,13 @@ def replace_diacritics(text: str) -> str:
     else:
         raise ValueError("Text must be a string")
 
-def identify_closest_text(text: str, text_list: List[str]) -> str:
-    """
-    Identify closest text from the list of text.
-
-    Args:
-        text (str): The input string to be compared.
-        text_list (List[str]): The list of text to be compared with the text to identify the closest one.
-
-    Returns:
-        str: The closest text in the list.
-    """
-    try:
-        # Identify the closest text
-        closest_text = difflib.get_close_matches(text, text_list)[0]
-        return closest_text
-    
-    except Exception as e:
-        # Show error
-        print(f"An unexpected error occurred: {e}")
-
-def standardize_cities(df: pd.DataFrame, city_column: str, city_list: List[str]) -> pd.DataFrame:
+def standardize_cities(df: pd.DataFrame, city_column: str) -> pd.DataFrame:
     """
     Standardizes the names of the cities in the city column of the DataFrame.
 
     Args:
         df (pd.DataFrame): The input DataFrame.
         city_column (str): The column containing the city names.
-        city_list (List[str]): The list containing the preprocessed true names of all the cities in Brazil without encoding errors or diacritics e.g. sao paulo.
 
     Returns:
         pd.DataFrame: The DataFrame with standardised names for the cities.
@@ -190,9 +346,6 @@ def standardize_cities(df: pd.DataFrame, city_column: str, city_list: List[str])
         
         # Replaces diacritics with plain alphabets
         df[city_column] = df[city_column].apply(replace_diacritics)
-
-        # Identifies the closest city match
-        df[city_column] = df[city_column].apply(lambda x: identify_closest_text(x, city_list))
         
         return df
     

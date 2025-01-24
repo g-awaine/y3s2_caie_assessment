@@ -2,3 +2,39 @@
 #
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+
+customers_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_customers_dataset.csv
+
+geolocation_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_geolocation_dataset.csv
+
+items_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_order_items_dataset.csv
+
+payments_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_order_payments_dataset.csv
+
+reviews_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_order_reviews_dataset.csv
+
+orders_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_orders_dataset.csv
+
+products_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_products_dataset.csv
+  
+sellers_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/olist_sellers_dataset.csv
+  
+translations_df:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/product_category_name_translation.csv
