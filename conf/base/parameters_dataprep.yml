@@ -3,3 +3,18 @@
 #
 # Documentation for this file format can be found in "Parameters"
 # Link: https://docs.kedro.org/en/0.19.10/configuration/parameters.html
+
+imputation_parameters:
+  significant_numerical_columns:
+    - 'product_name_lenght'
+    - 'product_description_lenght'
+    - 'product_photos_qty'
+    - 'product_weight_g'
+    - 'product_length_cm'
+    - 'product_height_cm'
+    - 'product_width_cm'
+  significant_categorical_columns: []
+  max_iter: 10
+  random_state: 42
+
+

@@ -3,3 +3,4 @@ jupyterlab>=3.0
 kedro~=0.19.10
 notebook
 pandas
+scikit-learn
