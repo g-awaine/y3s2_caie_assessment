@@ -4,79 +4,79 @@
 # Documentation for this file format can be found in "Parameters"
 # Link: https://docs.kedro.org/en/0.19.10/configuration/parameters.html
 
-clean_lat_lng_conditions:
-  geolocation_lat:
-    min: -33.742
-    max: 5.272
+geo_params:
+  lat_lng_filter:
+    geolocation_lat:
+      min: -33.742
+      max: 5.272
 
-  geolocation_lng:
-    min: -73.992
-    max: -34.792
+    geolocation_lng:
+      min: -73.992
+      max: -34.792
 
+  agg:
+    groupby: 'geolocation_zip_code_prefix'
+    func_map:
+      geolocation_lat: 'median'
+      geolocation_lng: 'median'
+      geolocation_city: 'mode'
+      geolocation_state: 'mode'
 
-geolocation_groupby_column: 'geolocation_zip_code_prefix'
+  zip_city_col_mapping:
+    zip_code: 'geolocation_zip_code_prefix'
+    city: 'geolocation_city'
+    true_zip_code: 'customer_zip_code_prefix'
+    true_city: 'customer_city'
 
+products_params:
+  missing:
+    subset: 
+      - 'product_category_name'
+      - 'product_name_lenght'
+      - 'product_description_lenght'
+      - 'product_photos_qty'
+      - 'product_weight_g'
+      - 'product_length_cm'
+      - 'product_height_cm'
+      - 'product_width_cm'
+    how: 'all'
 
-geolocation_agg_mapping: 
-  'geolocation_lat': 'median'
-  'geolocation_lng': 'median'
-  'geolocation_city': 'mode'
-  'geolocation_state': 'mode'
+  mice_imputation_config:
+    numerical_columns:
+      - 'product_name_lenght'
+      - 'product_description_lenght'
+      - 'product_photos_qty'
+      - 'product_weight_g'
+      - 'product_length_cm'
+      - 'product_height_cm'
+      - 'product_width_cm'
+    categorical_columns: []
+    iterations: 10
+    random_seed: 42
 
+orders_params:
+  col_to_remove:
+    - 'order_approved_at'
+    - 'order_delivered_carrier_date'
 
-geolocation_customers_city_map:
-  'zip_code': 'geolocation_zip_code_prefix'
-  'city': 'geolocation_city'
-  'true_zip_code': 'customer_zip_code_prefix'
-  'true_city' : 'customer_city'
+  features:
+    new_feature: 'estimated_actual_delivery_offset'
+    function_name: 'date_difference'
+    
+  date_column_mapping:
+    actual_date: 'order_delivered_customer_date'
+    estimated_date: 'order_estimated_delivery_date'
+    actual_date_format: '%Y-%m-%d %H:%M:%S'
+    estimated_date_format: '%Y-%m-%d %H:%M:%S'
 
-sellers_customers_city_map:
-  'zip_code': 'seller_zip_code_prefix'
-  'city': 'seller_city'
-  'true_zip_code': 'customer_zip_code_prefix'
-  'true_city' : 'customer_city'
+review_params:
+  col_to_remove:
+    - 'review_comment_title'
+    - 'review_comment_message'
 
-geolocation_city_column: 'customer_zip_code_prefix'
-
-sellers_city_column: 'seller_zip_code_prefix'
-
-missing_products_subset:
-  - 'product_category_name'
-  - 'product_name_lenght'
-  - 'product_description_lenght'
-  - 'product_photos_qty'
-  - 'product_weight_g'
-  - 'product_length_cm'
-  - 'product_height_cm'
-  - 'product_width_cm'
-
-
-mice_imputation_parameters:
-  significant_numerical_columns:
-    - 'product_name_lenght'
-    - 'product_description_lenght'
-    - 'product_photos_qty'
-    - 'product_weight_g'
-    - 'product_length_cm'
-    - 'product_height_cm'
-    - 'product_width_cm'
-  significant_categorical_columns: []
-  max_iter: 10
-  random_state: 42
-
-
-orders_columns_to_drop:
-  - 'order_approved_at'
-  - 'order_delivered_carrier_date'
-
-reveiws_columns_to_drop:
-  - 'review_comment_title' 
-  - 'review_comment_message'
-
-new_feature_orders: 'estimated_actual_delivery_offset'
-
-feature_engineering_orders_map:
-  'date1': 'order_delivered_customer_date'
-  'date2': 'order_estimated_delivery_date'
-  'date1_format': '%Y-%m-%d %H:%M:%S'
-  'date2_format': '%Y-%m-%d %H:%M:%S'
+sellers_params:
+  zip_city_col_mapping:
+    zip_code: 'seller_zip_code_prefix'
+    city: 'seller_city'
+    true_zip_code: 'customer_zip_code_prefix'
+    true_city: 'customer_city'

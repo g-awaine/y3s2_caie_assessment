@@ -21,9 +21,10 @@ def drop_duplicate(df: pd.DataFrame, subset: List[str] = None) -> pd.DataFrame:
     """
     try:
         # Check if columns exist in the DataFrame
-        missing_columns = [col for col in subset if col not in df.columns]
-        if missing_columns:
-            raise ValueError(f"Columns not found in the DataFrame: {', '.join(missing_columns)}")
+        if subset:
+            missing_columns = [col for col in subset if col not in df.columns]
+            if missing_columns:
+                raise ValueError(f"Columns not found in the DataFrame: {', '.join(missing_columns)}")
 
         return df.drop_duplicates(subset=subset, keep='first', inplace=False, ignore_index=False)
 
@@ -172,7 +173,7 @@ def aggregate_by_column(df: pd.DataFrame, column: str, agg: dict) -> pd.DataFram
                 agg[field] = aggregation
                 
         # Aggregate the input DataFrame by the specified column
-        aggregated_df = df.groupby(column).agg(agg)
+        aggregated_df = df.groupby(column).agg(agg).reset_index()
 
         # Return the aggregated Dataframe
         return aggregated_df
@@ -185,62 +186,6 @@ def aggregate_by_column(df: pd.DataFrame, column: str, agg: dict) -> pd.DataFram
         # Show the error
         print(f"An unexpected error occurred: {e}")
         return df
- 
-
-def cross_reference_cities(
-    df: pd.DataFrame, ssot_city_df: pd.DataFrame, mapping: Dict[str, str]
-) -> pd.DataFrame:
-    """
-    Cross-references the input DataFrame with a single source of truth (SSOT) DataFrame 
-    containing Brazilian zip codes and cities.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame.
-        ssot_city_df (pd.DataFrame): The SSOT DataFrame containing Brazilian zip codes and cities.
-        mapping (Dict[str, str]): Maps the column name of the zip code and city in the datasets.
-            zip_code (str): The column name in df representing the zip code.
-            city (str): The column name in df representing the city name.
-            true_zip_code (str): The column name in ssot_city_df representing the zip code in ssot_city_df.
-            true_city (str): The column name in ssot_city_df representing the true city name.
-
-    Returns:
-        pd.DataFrame: The updated DataFrame with consistent city and zip codes.
-    """
-    # Extract the column mappings
-    zip_code = mapping.get('zip_code')
-    city = mapping.get('city')
-    true_zip_code = mapping.get('true_zip_code')
-    true_city = mapping.get('true_city')
-
-    # Initialise an updated DataFrame
-    updated_df = df.copy()
-
-    try:
-        # Check if required columns exist in the DataFrames
-        missing_columns_df = [col for col in [zip_code, city] if col not in df.columns]
-        missing_columns_ssot = [col for col in [true_zip_code, true_city] if col not in ssot_city_df.columns]
-
-        if missing_columns_df:
-            raise ValueError(f"Columns missing in input DataFrame: {', '.join(missing_columns_df)}")
-        if missing_columns_ssot:
-            raise ValueError(f"Columns missing in SSOT DataFrame: {', '.join(missing_columns_ssot)}")
-
-        # Create a lookup DataFrame for mode (most frequent) values based on `zip_code`
-        ssot_lookup = ssot_city_df.groupby(true_zip_code)[true_city] \
-            .agg(lambda x: x.mode()[0] if not x.empty else None)
-
-        # Update inconsistent city and zip codes in the original DataFrame
-        updated_df[city] = df[zip_code].apply(lambda x: ssot_lookup.loc[x] if x in ssot_lookup.index else x)
-
-        return updated_df
-
-    except ValueError as ve:
-        print(f"ValueError: {ve}")
-        return df
-
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return df
 
 
 def cross_reference_cities(
@@ -286,7 +231,7 @@ def cross_reference_cities(
             .agg(lambda x: x.mode()[0] if not x.empty else None)
 
         # Update inconsistent city and zip codes in the original DataFrame
-        updated_df[city] = df[zip_code].apply(lambda x: ssot_lookup.loc[x] if x in ssot_lookup.index else x)
+        updated_df[city] = df.apply(lambda row: ssot_lookup.loc[row[zip_code]] if row[zip_code] in ssot_lookup.index else row[city], axis=1)
 
         return updated_df
 
@@ -345,7 +290,7 @@ def standardize_cities(df: pd.DataFrame, city_column: str) -> pd.DataFrame:
             raise ValueError(f"Column not found in the DataFrame")
         
         # Replaces diacritics with plain alphabets
-        df[city_column] = df[city_column].apply(replace_diacritics)
+        df[city_column] = df[city_column].astype(str).apply(lambda x: replace_diacritics(x))
         
         return df
     
@@ -377,8 +322,8 @@ def mice_impute_entries(df: pd.DataFrame, imputation_parameters: dict) -> pd.Dat
     """
     try:
         # Identify the numerical and categorical columns from the significant columns
-        numerical_cols = imputation_parameters.get('significant_numerical_columns', [])
-        categorical_cols = imputation_parameters.get('significant_categorical_columns', [])
+        numerical_cols = imputation_parameters.get('numerical_columns', [])
+        categorical_cols = imputation_parameters.get('categorical_columns', [])
 
         # Get the max iteration and random state for the MICE imputer
         max_iter = imputation_parameters.get('max_iter', 10)
@@ -510,26 +455,25 @@ def date_difference(row: pd.Series, params: dict) -> int:
     Parameters:
         row (pd.Series): The row from the dataset.
         mapping (dict): A dictionary containing:
-            - 'date1': Column name for the first date.
-            - 'date2': Column name for the second date.
-            - 'date1_format': Format of the first date.
-            - 'date2_format': Format of the second date.
+            - 'actual_date': Column name for actual delivery first date.
+            - 'estimated_date': Column name for the estimated delivery date.
+            - 'actual_date_format': Format of the actual delivery date.
+            - 'estimated_date_format': Format of the estimated delivery date.
 
     Returns:
         int: The difference in days between the two dates.
     """
     try:
         # Identify the 2 dates
-        date1 = row[params['date1']]
-        date2 = row[params['date2']]
-
+        date1 = row[params['actual_date']]
+        date2 = row[params['estimated_date']]
         # Check if there are any missing dates
         if pd.isna(date1) or pd.isna(date2):
             return None # Returns None when its not delivered yet
         
         # Parse the dates
-        d1 = datetime.strptime(date1, params['date1_format'])
-        d2 = datetime.strptime(date2, params['date2_format'])
+        d1 = datetime.strptime(date1, params['actual_date_format'])
+        d2 = datetime.strptime(date2, params['estimated_date_format'])
 
         # Calculate the difference
         day_difference = (d2 - d1).days
@@ -538,20 +482,24 @@ def date_difference(row: pd.Series, params: dict) -> int:
     except ValueError as ve:
         raise ValueError(f"Invalid date or format: {ve}")
     
-def feature_engineering(df: pd.DataFrame, new_feature: str, function: Callable, mapping: Dict[str, str]) -> pd.DataFrame:
+    
+def feature_engineering(df: pd.DataFrame, new_feature: str, function_name: str, mapping: Dict[str, str]) -> pd.DataFrame:
     """
     Create a new feature based on the features in the row.
 
     Parameters:
         df (pd.DataFrame): The input DataFrame.
         new_feature (str): The column name of the new feature to be created.
-        function (Callable): The function to be applied in order to create the feature.
+        function_name (str): The name of the function to be applied in order to create the feature.
         mapping (List[str]): Mapping column names to the parameter names used by the function. Provides other arguments for the function.
 
     Returns:
         pd.DataFrame: The DataFrame with new features.
     """
     try:
+        # Obtain the function based on name
+        function = globals()[function_name]
+
         # Check if the function is valid
         if not callable(function):
             raise ValueError(f"Function is invalid or not callable")

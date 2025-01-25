@@ -10,85 +10,98 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=drop_duplicate,
-                inputs=["geolocation_df"],
-                outputs="dropped_dupes_geolocation_df",
-                name="remove_duplicates_geolocation"
+                inputs=["geo_raw"],
+                outputs="geo_no_dupes",
+                name="remove_duplicates_geo"
             ),
             node(
                 func=drop_rows_lat_lng,
-                inputs=["dropped_dupes_geolocation_df", "params:clean_lat_lng_conditions"],
-                outputs="clean_lat_lng_geolocation_df",
-                name="clean_lat_lng_geolocation"
+                inputs=["geo_no_dupes", 
+                        "params:geo_params.lat_lng_filter"],
+                outputs="geo_clean_lat_lng",
+                name="clean_lat_lng_geo"
             ),
             node(
                 func=aggregate_by_column,
-                inputs=["clean_lat_lng_geolocation_df", "params:geolocation_groupby_column", "param:geolocation_agg_mapping"],
-                outputs="agg_geolocation_df",
-                name="aggregate_geolocation"
+                inputs=["geo_clean_lat_lng", 
+                        "params:geo_params.agg.groupby", 
+                        "params:geo_params.agg.func_map"],
+                outputs="geo_aggregated",
+                name="aggregate_geo"
             ),
             node(
                 func=cross_reference_cities,
-                inputs=["agg_geolocation_df", "customers_df", "param:geolocation_customers_city_map"],
-                outputs="cross_referenced_geolocation_df",
-                name="cross_reference_cities_geolocation"
+                inputs=["geo_aggregated", 
+                        "customers_raw", 
+                        "params:geo_params.zip_city_col_mapping"],
+                outputs="geo_city_xref",
+                name="cross_reference_geo_cities"
             ),
             node(
                 func=standardize_cities,
-                inputs=["cross_referenced_geolocation_df", "param:geolocation_city_column"],
-                outputs="cleaned_geolocation_df",
-                name="standardised_geolocation_city_spelling"
+                inputs=["geo_city_xref", 
+                        "params:geo_params.zip_city_col_mapping.city"],
+                outputs="geo_standardised_cities",
+                name="standardize_geo_city_spelling"
             ),
             node(
                 func=drop_rows_missing_values,
-                inputs=["products_df", "param: missing_products_subset", "all"],
-                outputs="dropped_missing_values_products_df",
-                name="drop_missing_values_products"
+                inputs=["products_raw", 
+                        "params:products_params.missing.subset", 
+                        "params:products_params.missing.how"],
+                outputs="products_no_missing",
+                name="drop_missing_products"
             ),
             node(
                 func=mice_impute_entries,
-                inputs=["products_df", "param: mice_imputation_parameters"],
-                outputs="imputed_products_df",
+                inputs=["products_no_missing", 
+                        "params:products_params.mice_imputation_config"],
+                outputs="products_imputed",
                 name="impute_products"
             ),
             node(
                 func=drop_columns,
-                inputs=["orders_df", "param: orders_columns_to_drop"],
-                outputs="dropped_columns_orders_df",
-                name="drop_columns_products"
+                inputs=["orders_raw", 
+                        "params:orders_params.col_to_remove"],
+                outputs="orders_clean_cols",
+                name="drop_order_columns"
             ),
             node(
                 func=drop_erroneous_orders,
-                inputs=["dropped_columns_orders_df"],
-                outputs="dropped_orders_products_df",
-                name="drop_erroneous_orders_products"
+                inputs=["orders_clean_cols"],
+                outputs="dropped_orders",
+                name="drop_erroneous_orders"
             ),
             node(
                 func=feature_engineering,
-                inputs=["dropped_orders_products_df",
-                        "param:new_feature_orders",
-                        date_difference,
-                        "param:feature_engineering_orders_map"
+                inputs=["dropped_orders",
+                        "params:orders_params.features.new_feature",
+                        "params:orders_params.features.function_name",
+                        "params:orders_params.date_column_mapping"
                         ],
-                outputs="feature_engineered_orders_df",
+                outputs="orders_feature_engineered",
                 name="feature_engineering_orders"
             ),
             node(
                 func=drop_columns,
-                inputs=["reviews_df", "param: orders_columns_to_drop"],
-                outputs="dropped_columns_reviews_df",
-                name="drop_columns_reviews"
+                inputs=["reviews_raw", "params:review_params.col_to_remove"],
+                outputs="reviews_clean_cols",
+                name="drop_review_columns"
             ),
             node(
                 func=cross_reference_cities,
-                inputs=["sellers_df", "customers_df", "param:sellers_customers_city_map"],
-                outputs="cross_referenced_sellers_df",
-                name="cross_reference_cities_sellers"
+                inputs=["sellers_raw", 
+                        "customers_raw", 
+                        "params:sellers_params.zip_city_col_mapping"],
+                outputs="sellers_city_xref",
+                name="cross_reference_seller_cities"
             ),
             node(
                 func=standardize_cities,
-                inputs=["cross_referenced_sellers_df", "param:sellers_city_column"],
-                outputs="cleaned_sellers_df",
-                name="standardised_sellers_city_spelling"
+                inputs=["sellers_city_xref", 
+                        "params:sellers_params.zip_city_col_mapping.city"],
+                outputs="sellers_standardised_cities",
+                name="standardize_seller_city_spelling"
             )
         ]
 )

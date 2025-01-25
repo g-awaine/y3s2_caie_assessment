@@ -3,38 +3,75 @@
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
 
-customers_df:
+# Raw Datasets
+customers_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_customers_dataset.csv
+  load_args:
+    dtype:
+      customer_zip_code_prefix: str
 
-geolocation_df:
+geo_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_geolocation_dataset.csv
+  load_args:
+    dtype:
+      geolocation_zip_code_prefix: str
 
-items_df:
+items_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_order_items_dataset.csv
 
-payments_df:
+payments_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_order_payments_dataset.csv
 
-reviews_df:
+reviews_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_order_reviews_dataset.csv
 
-orders_df:
+orders_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_orders_dataset.csv
 
-products_df:
+products_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_products_dataset.csv
   
-sellers_df:
+sellers_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/olist_sellers_dataset.csv
+  load_args:
+    dtype:
+      seller_zip_code_prefix: str
   
-translations_df:
+translations_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/product_category_name_translation.csv
+
+# Processed datasets
+geo_standardised_cities:
+  type: pandas.CSVDataset
+  filepath: data/02_processed/cleaned_geolocation_dataset.csv
+  load_args:
+    dtype:
+      geolocation_zip_code_prefix: str
+
+reviews_clean_cols:
+  type: pandas.CSVDataset
+  filepath: data/02_processed/cleaned_order_reviews_dataset.csv
+
+orders_feature_engineered:
+  type: pandas.CSVDataset
+  filepath: data/02_processed/cleaned_orders_dataset.csv
+
+products_imputed:
+  type: pandas.CSVDataset
+  filepath: data/02_processed/cleaned_products_dataset.csv
+  
+sellers_standardised_cities:
+  type: pandas.CSVDataset
+  filepath: data/02_processed/cleaned_sellers_dataset.csv
+  load_args:
+    dtype:
+      seller_zip_code_prefix: str
