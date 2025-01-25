@@ -29,3 +29,6 @@ reviews
 payments dataset
 - There are 2 orders which are missing payments which need to be imputed.
 - There are 78 orders with erroneous payment_sequential values that need to be corrected.
+
+
+maybe try to identify the products which belong to repeated rather than aggregating first

@@ -72,7 +72,7 @@ dropped_orders:
   type: pandas.CSVDataset
   filepath: data/02_processed/cleaned_orders_dataset.csv
 
-products_imputed:
+products_simple_imputed:
   type: pandas.CSVDataset
   filepath: data/02_processed/cleaned_products_dataset.csv
   

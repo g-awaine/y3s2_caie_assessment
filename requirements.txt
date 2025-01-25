@@ -6,3 +6,7 @@ notebook
 pandas
 scikit-learn
 lightbgm
+matplotlib
+seaborn
+plotly
+kaleido

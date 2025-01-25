@@ -83,7 +83,7 @@ def drop_erroneous_orders(df: pd.DataFrame) -> pd.DataFrame:
     """
     try:
         # Filters out the erroneous orders
-        df = df[~(df['order_status'] == 'delivered' & pd.isna(df['order_delivered_customer_date']))]
+        df = df[~((df['order_status'] == 'delivered') & pd.isna(df['order_delivered_customer_date']))]
         return df
     
     except Exception as e:
@@ -436,6 +436,7 @@ def simple_impute_entries(df: pd.DataFrame, column: str, value: str) -> pd.DataF
         
         # Impute the empty cells in the column with the specified value
         df[column] = df[column].fillna(value)
+        return df
         
     except ValueError as ve:
         # Show error

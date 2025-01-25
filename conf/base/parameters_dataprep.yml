@@ -57,6 +57,10 @@ products_params:
     iterations: 10
     random_seed: 42
 
+  simple_impute: 
+    column: 'product_category_name'
+    value: 'missing'
+
 orders_params:
   col_to_remove:
     - 'order_approved_at'

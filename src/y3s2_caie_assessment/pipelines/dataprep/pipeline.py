@@ -63,8 +63,16 @@ def create_pipeline(**kwargs) -> Pipeline:
                 func=mice_impute_entries,
                 inputs=["products_no_missing", 
                         "params:products_params.mice_imputation_config"],
-                outputs="products_imputed",
-                name="impute_products"
+                outputs="products_mice_imputed",
+                name="mice_impute_products"
+            ),
+            node(
+                func=simple_impute_entries,
+                inputs=["products_mice_imputed", 
+                        "params:products_params.simple_impute.column",
+                        "params:products_params.simple_impute.value"],
+                outputs="products_simple_imputed",
+                name="simple_impute_products"
             ),
             node(
                 func=drop_columns,
