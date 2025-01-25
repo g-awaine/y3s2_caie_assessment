@@ -3,6 +3,9 @@
 #
 # Documentation for this file format can be found in "Parameters"
 # Link: https://docs.kedro.org/en/0.19.10/configuration/parameters.html
+customers_params:
+  zip_city_col_mapping:
+    city: 'customer_city'
 
 geo_params:
   lat_lng_filter:

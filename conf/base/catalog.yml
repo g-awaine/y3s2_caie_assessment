@@ -50,6 +50,13 @@ translations_raw:
   filepath: data/01_raw/product_category_name_translation.csv
 
 # Processed datasets
+customers_standardised_cities:
+  type: pandas.CSVDataset
+  filepath: data/02_processed/cleaned_customers_dataset.csv
+  load_args:
+    dtype:
+      customer_zip_code_prefix: str
+
 geo_standardised_cities:
   type: pandas.CSVDataset
   filepath: data/02_processed/cleaned_geolocation_dataset.csv
@@ -61,7 +68,7 @@ reviews_clean_cols:
   type: pandas.CSVDataset
   filepath: data/02_processed/cleaned_order_reviews_dataset.csv
 
-orders_feature_engineered:
+dropped_orders:
   type: pandas.CSVDataset
   filepath: data/02_processed/cleaned_orders_dataset.csv
 

@@ -1,5 +1,4 @@
 import re
-import difflib
 import pandas as pd
 from datetime import datetime
 from typing import List, Callable, Dict
@@ -84,7 +83,7 @@ def drop_erroneous_orders(df: pd.DataFrame) -> pd.DataFrame:
     """
     try:
         # Filters out the erroneous orders
-        df = df[(df['order_status'] == 'delivered') & (pd.isna(df['order_delivered_customer_date']))]
+        df = df[~(df['order_status'] == 'delivered' & pd.isna(df['order_delivered_customer_date']))]
         return df
     
     except Exception as e:
@@ -261,7 +260,8 @@ def replace_diacritics(text: str) -> str:
         r'[úûùü]': 'u',
         r'[éêèë]': 'e',
         r'[óõôòö]': 'o',
-        r'[ç]': 'c'
+        r'[ç]': 'c',
+        r'[\']': ' '
     }
 
     # Checks if the text is a string

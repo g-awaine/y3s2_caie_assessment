@@ -1,8 +1,90 @@
-"""
-This is a boilerplate pipeline 'modelling'
-generated using Kedro 0.19.10
-"""
+import pandas as pd
+import datetime as datetime
+from typing import List, Dict
+import numpy as np
+import lightgbm as lgb
 
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold, GridSearchCV
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+
+def date_difference(row: pd.Series, params: dict) -> int:
+    """
+    Calculate the difference in days between two dates.
+
+    Parameters:
+        row (pd.Series): The row from the dataset.
+        mapping (dict): A dictionary containing:
+            - 'actual_date': Column name for actual delivery first date.
+            - 'estimated_date': Column name for the estimated delivery date.
+            - 'actual_date_format': Format of the actual delivery date.
+            - 'estimated_date_format': Format of the estimated delivery date.
+
+    Returns:
+        int: The difference in days between the two dates.
+    """
+    try:
+        # Identify the 2 dates
+        date1 = row[params['actual_date']]
+        date2 = row[params['estimated_date']]
+        # Check if there are any missing dates
+        if pd.isna(date1) or pd.isna(date2):
+            return None # Returns None when its not delivered yet
+        
+        # Parse the dates
+        d1 = datetime.strptime(date1, params['actual_date_format'])
+        d2 = datetime.strptime(date2, params['estimated_date_format'])
+
+        # Calculate the difference
+        day_difference = (d2 - d1).days
+        return day_difference
+    
+    except ValueError as ve:
+        raise ValueError(f"Invalid date or format: {ve}")
+    
+    
+def feature_engineering(df: pd.DataFrame, new_feature: str, function_name: str, mapping: Dict[str, str]) -> pd.DataFrame:
+    """
+    Create a new feature based on the features in the row.
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        new_feature (str): The column name of the new feature to be created.
+        function_name (str): The name of the function to be applied in order to create the feature.
+        mapping (List[str]): Mapping column names to the parameter names used by the function. Provides other arguments for the function.
+
+    Returns:
+        pd.DataFrame: The DataFrame with new features.
+    """
+    try:
+        # Obtain the function based on name
+        function = globals()[function_name]
+
+        # Check if the function is valid
+        if not callable(function):
+            raise ValueError(f"Function is invalid or not callable")
+        
+        # Initialise the feature engineered DataFrame
+        feature_engineered_df = df.copy()
+        
+        # Apply the function to each row and create the new feature
+        feature_engineered_df[new_feature] = df.apply(lambda row: function(row, mapping), axis=1)
+        return feature_engineered_df
+
+    except ValueError as ve:
+        # Show error
+        print(f"ValueError: {ve}")
+        return df
+
+    except Exception as e:
+        # Show the error
+        print(f"An error occurred during feature engineering: {e}")
+        return df
+    
+    
 def standardisation_and_encoding(df: pd.DataFrame, numerical_cols: List[str], categorical_cols: List[str]) -> pd.DataFrame:
     """
     Encodes the categorical data into One Hot Encoded vectors and standardises the scaling of numerical data

@@ -9,6 +9,13 @@ def create_pipeline(**kwargs) -> Pipeline:
     return Pipeline(
         [
             node(
+                func=standardize_cities,
+                inputs=["customers_raw", 
+                        "params:customers_params.zip_city_col_mapping.city"],
+                outputs="customers_standardised_cities",
+                name="standardize_customers_city_spelling"
+            ),
+            node(
                 func=drop_duplicate,
                 inputs=["geo_raw"],
                 outputs="geo_no_dupes",
@@ -71,16 +78,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["orders_clean_cols"],
                 outputs="dropped_orders",
                 name="drop_erroneous_orders"
-            ),
-            node(
-                func=feature_engineering,
-                inputs=["dropped_orders",
-                        "params:orders_params.features.new_feature",
-                        "params:orders_params.features.function_name",
-                        "params:orders_params.date_column_mapping"
-                        ],
-                outputs="orders_feature_engineered",
-                name="feature_engineering_orders"
             ),
             node(
                 func=drop_columns,
