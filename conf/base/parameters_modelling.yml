@@ -5,18 +5,18 @@
 # Link: https://docs.kedro.org/en/0.19.10/configuration/parameters.html
 
 
-orders_modelling_params:
-  features:
-    new_feature: 'estimated_actual_delivery_offset'
-    function_name: 'date_difference'
-    
-  date_column_mapping:
-    actual_date: 'order_delivered_customer_date'
-    estimated_date: 'order_estimated_delivery_date'
-    actual_date_format: '%Y-%m-%d %H:%M:%S'
-    estimated_date_format: '%Y-%m-%d %H:%M:%S'
+modelling_dataset:
+  numerical_cols: 
+    - 'review_score'
+    - 'median_product_weight_g'
+    - 'product_volume'
+    - 'delivery_duration'
 
+  categorical_cols: 
+    - 'customer_city'
+    - 'mode_product_category_name'
 
+  label_col: 'is_repeated_customer'
 
 random_state: 42
 
@@ -24,14 +24,17 @@ split_parameters:
   n_splits: 5
   test_size: 0.2
 
+
 kfold_params:
-  outer_folds: 5
-  inner_folds: 5
+  outer_folds: 3
+  inner_folds: 3
   shuffle: True
   random_state: 42
 
+
 rf_params:
   random_state: 42
+
 
 lightbgm_params:
   objective: "binary"
@@ -41,8 +44,53 @@ lightbgm_params:
   verbosity: -1
   n_jobs: -1
 
-svm_params:
-  kernel: "linear"
+
+lr_params:
   random_state: 42
 
   
+grid_params:
+  rf:
+    max_depth: 
+      - 1
+      - 5
+    n_estimators: 
+      - 100
+      - 300
+    min_samples_split: 
+      - 5
+      - 15
+    max_features: 
+      - 'log2'
+      - 'sqrt'
+
+  lightgbm:
+    max_depth: 
+      - 8
+      - 16
+    num_leaves: 
+      - 10
+      - 30
+    n_estimators: 
+      - 200
+      - 300
+    max_bin: 
+      - 30
+      - 127
+    reg_lambda:
+      - 1
+      - 10
+
+  lr:
+    C: 
+      - 0.01
+      - 1.0
+
+    l1_ratio: 
+      - 0.0
+      - 1.0
+
+    log_reg__max_iter:
+      - 200
+      - 500
+      - 1000

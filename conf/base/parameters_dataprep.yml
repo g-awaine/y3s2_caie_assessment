@@ -7,15 +7,18 @@ customers_params:
   zip_city_col_mapping:
     city: 'customer_city'
 
+
 geo_params:
   lat_lng_filter:
     geolocation_lat:
       min: -33.742
       max: 5.272
 
+
     geolocation_lng:
       min: -73.992
       max: -34.792
+
 
   agg:
     groupby: 'geolocation_zip_code_prefix'
@@ -25,11 +28,13 @@ geo_params:
       geolocation_city: 'mode'
       geolocation_state: 'mode'
 
+
   zip_city_col_mapping:
     zip_code: 'geolocation_zip_code_prefix'
     city: 'geolocation_city'
     true_zip_code: 'customer_zip_code_prefix'
     true_city: 'customer_city'
+
 
 products_params:
   missing:
@@ -44,6 +49,7 @@ products_params:
       - 'product_width_cm'
     how: 'all'
 
+
   mice_imputation_config:
     numerical_columns:
       - 'product_name_lenght'
@@ -57,29 +63,23 @@ products_params:
     iterations: 10
     random_seed: 42
 
+
   simple_impute: 
     column: 'product_category_name'
     value: 'missing'
+
 
 orders_params:
   col_to_remove:
     - 'order_approved_at'
     - 'order_delivered_carrier_date'
 
-  features:
-    new_feature: 'estimated_actual_delivery_offset'
-    function_name: 'date_difference'
-    
-  date_column_mapping:
-    actual_date: 'order_delivered_customer_date'
-    estimated_date: 'order_estimated_delivery_date'
-    actual_date_format: '%Y-%m-%d %H:%M:%S'
-    estimated_date_format: '%Y-%m-%d %H:%M:%S'
 
 review_params:
   col_to_remove:
     - 'review_comment_title'
     - 'review_comment_message'
+
 
 sellers_params:
   zip_city_col_mapping:
@@ -87,3 +87,35 @@ sellers_params:
     city: 'seller_city'
     true_zip_code: 'customer_zip_code_prefix'
     true_city: 'customer_city'
+
+
+functions:
+  product_volume: 'calculate_product_volume'
+  delivery_duration: 'date_difference'
+
+
+feature_eng:
+  new_features:
+    product_volume: "product_volume"
+    delivery_duration: "delivery_duration"
+
+  dimensions_cols:
+    - 'median_product_length_cm'
+    - 'median_product_height_cm'
+    - 'median_product_width_cm'
+
+  delivery_dates:
+    - 'order_purchase_timestamp'
+    - 'order_delivered_customer_date'
+    - '%Y-%m-%d %H:%M:%S'
+    - '%Y-%m-%d %H:%M:%S'
+
+feature_selection:
+  features:
+    - 'customer_city'
+    - 'review_score'
+    - 'median_product_weight_g'
+    - 'product_volume'
+    - 'mode_product_category_name'
+    - 'delivery_duration'  
+    - 'is_repeated_customer'

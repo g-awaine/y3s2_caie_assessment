@@ -10,3 +10,6 @@ matplotlib
 seaborn
 plotly
 kaleido
+mpl-tools
+basemap
+imbalanced-learn

@@ -107,6 +107,56 @@ def create_pipeline(**kwargs) -> Pipeline:
                         "params:sellers_params.zip_city_col_mapping.city"],
                 outputs="sellers_standardised_cities",
                 name="standardize_seller_city_spelling"
+            ),
+            node(
+                func=identify_repeated_customers,
+                inputs="customers_standardised_cities",
+                outputs="repeated_customers",
+                name="create_repeated_customers_dataset"
+            ),
+            node(
+                func=create_modelling_dataset,
+                inputs=[
+                    "customers_standardised_cities",
+                    "dropped_orders",
+                    "reviews_clean_cols",
+                    "items_raw",
+                    "products_simple_imputed",
+                    "repeated_customers"
+                ],
+                outputs="modelling_dataset_1",
+                name="create_modelling_dataset"
+            ),
+            node(
+                func=feature_engineering,
+                inputs=[
+                    "modelling_dataset_1",
+                    "params:feature_eng.new_features.product_volume",
+                    "params:functions.product_volume",
+                    "params:feature_eng.dimensions_cols"
+                ],
+                outputs="modelling_dataset_2",
+                name="adding_product_volume"
+            ),
+            node(
+                func=feature_engineering,
+                inputs=[
+                    "modelling_dataset_2",
+                    "params:feature_eng.new_features.delivery_duration",
+                    "params:functions.delivery_duration",
+                    "params:feature_eng.delivery_dates"
+                ],
+                outputs="modelling_dataset_3",
+                name="adding_delivery_duration"
+            ),
+            node(
+                func=feature_selection,
+                inputs=[
+                    "modelling_dataset_3",
+                    "params:feature_selection.features"
+                ],
+                outputs="final_modelling_dataset",
+                name="feature_selection"
             )
         ]
 )

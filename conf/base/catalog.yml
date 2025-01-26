@@ -67,7 +67,7 @@ geo_standardised_cities:
 reviews_clean_cols:
   type: pandas.CSVDataset
   filepath: data/02_processed/cleaned_order_reviews_dataset.csv
-
+  
 dropped_orders:
   type: pandas.CSVDataset
   filepath: data/02_processed/cleaned_orders_dataset.csv
@@ -82,3 +82,57 @@ sellers_standardised_cities:
   load_args:
     dtype:
       seller_zip_code_prefix: str
+
+repeated_customers:
+  type: pandas.CSVDataset
+  filepath: data/02_processed/repeated_customers_dataset.csv
+
+final_modelling_dataset:
+  type: pandas.CSVDataset
+  filepath: data/03_modelling/modelling_dataset.csv
+
+
+
+gr_rf_param_acc_comparison:
+  type: pandas.CSVDataset
+  filepath: data/08_grid_search_param_comparisons/optimised_rf_param_acc_comparison.csv
+
+gr_lightbgm_param_acc_comparison:
+  type: pandas.CSVDataset
+  filepath: data/08_grid_search_param_comparisons/gr_lightbgm_param_acc_comparison.csv
+
+gr_lr_param_acc_comparison:
+  type: pandas.CSVDataset
+  filepath: data/08_grid_search_param_comparisons/gr_lr_param_acc_comparison.csv
+
+agg_val_metrics_5:
+  type: pandas.CSVDataset
+  filepath: data/09_metrics/agg_val_metrics.csv
+
+test_results:
+  type: pandas.CSVDataset
+  filepath: data/09_metrics/test_metrics.csv
+
+inference_unoptimized_rf_df:
+  type: pandas.CSVDataset
+  filepath: data/10_inference/inference_unoptimized_rf_df.csv
+
+inference_optimized_rf_df:
+  type: pandas.CSVDataset
+  filepath: data/10_inference/inference_optimized_rf_df.csv
+
+inference_unoptimized_lightbgm_df:
+  type: pandas.CSVDataset
+  filepath: data/10_inference/inference_unoptimized_lightbgm_df.csv
+
+inference_optimized_lightbgm_df:
+  type: pandas.CSVDataset
+  filepath: data/10_inference/inference_optimized_lightbgm_df.csv
+
+inference_unoptimized_lr_df:
+  type: pandas.CSVDataset
+  filepath: data/10_inference/inference_unoptimized_lr_df.csv
+  
+inference_optimized_lr_df:
+  type: pandas.CSVDataset
+  filepath: data/10_inference/inference_optimized_lr_df.csv

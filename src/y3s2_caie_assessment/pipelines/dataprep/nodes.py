@@ -1,7 +1,7 @@
 import re
 import pandas as pd
 from datetime import datetime
-from typing import List, Callable, Dict
+from typing import List, Dict
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
 from sklearn.experimental import enable_iterative_imputer
@@ -449,32 +449,34 @@ def simple_impute_entries(df: pd.DataFrame, column: str, value: str) -> pd.DataF
         return df
 
 
-def date_difference(row: pd.Series, params: dict) -> int:
+def date_difference(row: pd.Series, args:tuple) -> int:
     """
     Calculate the difference in days between two dates.
 
     Parameters:
         row (pd.Series): The row from the dataset.
-        mapping (dict): A dictionary containing:
-            - 'actual_date': Column name for actual delivery first date.
-            - 'estimated_date': Column name for the estimated delivery date.
-            - 'actual_date_format': Format of the actual delivery date.
-            - 'estimated_date_format': Format of the estimated delivery date.
+        args (tuple): Contains the column names of the date information from the row.
+            date1_col: Column name containing the first date.
+            date2_col: Column name containing the second date.
+            date1_format: Format of the first date.
+            date2_format: Format of the second date.
 
     Returns:
         int: The difference in days between the two dates.
     """
     try:
+        # Extract information from args
+        date1_col, date2_col, date1_format, date2_format = args
         # Identify the 2 dates
-        date1 = row[params['actual_date']]
-        date2 = row[params['estimated_date']]
+        date1 = row[date1_col]
+        date2 = row[date2_col]
         # Check if there are any missing dates
         if pd.isna(date1) or pd.isna(date2):
             return None # Returns None when its not delivered yet
         
         # Parse the dates
-        d1 = datetime.strptime(date1, params['actual_date_format'])
-        d2 = datetime.strptime(date2, params['estimated_date_format'])
+        d1 = datetime.strptime(date1, date1_format)
+        d2 = datetime.strptime(date2, date2_format)
 
         # Calculate the difference
         day_difference = (d2 - d1).days
@@ -484,7 +486,41 @@ def date_difference(row: pd.Series, params: dict) -> int:
         raise ValueError(f"Invalid date or format: {ve}")
     
     
-def feature_engineering(df: pd.DataFrame, new_feature: str, function_name: str, mapping: Dict[str, str]) -> pd.DataFrame:
+def calculate_product_volume(row: pd.Series, args:tuple) -> float:
+    """
+    Calculate the product volume based on length, height, and width columns from a row.
+
+    Parameters:
+        row (pd.Series): The row data containing the dimensions.
+        args (tuple): Containing the columns names of the dimensions in the row.
+            length_col (str): The column name for the length.
+            height_col (str): The column name for the height.
+            width_col (str): The column name for the width.
+
+    Returns:
+        float: The calculated product volume.
+    """
+    try:
+        length_col, height_col, width_col = args
+        # Validate the necessary columns exist in the row
+        if not all(col in row for col in [length_col, height_col, width_col]):
+            raise ValueError(f"One or more required columns ({length_col}, {height_col}, {width_col}) are missing from the row.")
+
+        # Calculate the product volume
+        product_volume = row[length_col] * row[height_col] * row[width_col]
+        return product_volume
+
+    except KeyError as e:
+        # Raise an error if the column names are not passed
+        raise ValueError(f"Missing column name: {e}")
+    
+    except Exception as e:
+        # Handle other unexpected errors
+        print(f"Error calculating product volume: {e}")
+        return None
+
+
+def feature_engineering(df: pd.DataFrame, new_feature: str, function_name: str,  *args) -> pd.DataFrame:
     """
     Create a new feature based on the features in the row.
 
@@ -492,8 +528,9 @@ def feature_engineering(df: pd.DataFrame, new_feature: str, function_name: str, 
         df (pd.DataFrame): The input DataFrame.
         new_feature (str): The column name of the new feature to be created.
         function_name (str): The name of the function to be applied in order to create the feature.
-        mapping (List[str]): Mapping column names to the parameter names used by the function. Provides other arguments for the function.
+        *args: Positional arguments (expected to include column names for length, height, and width).
 
+    
     Returns:
         pd.DataFrame: The DataFrame with new features.
     """
@@ -509,7 +546,7 @@ def feature_engineering(df: pd.DataFrame, new_feature: str, function_name: str, 
         feature_engineered_df = df.copy()
         
         # Apply the function to each row and create the new feature
-        feature_engineered_df[new_feature] = df.apply(lambda row: function(row, mapping), axis=1)
+        feature_engineered_df[new_feature] = df.apply(lambda row: function(row, *args), axis=1)
         return feature_engineered_df
 
     except ValueError as ve:
@@ -521,59 +558,155 @@ def feature_engineering(df: pd.DataFrame, new_feature: str, function_name: str, 
         # Show the error
         print(f"An error occurred during feature engineering: {e}")
         return df
-    
 
-def standardisation_and_encoding(df: pd.DataFrame, numerical_cols: List[str], categorical_cols: List[str]) -> pd.DataFrame:
+
+def identify_repeated_customers(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Encodes the categorical data into One Hot Encoded vectors and standardises the scaling of numerical data
+    Identify repeated customers based on their order history and create a DataFrame of it.
+    
+    Args:
+        df (pd.DataFrame): The input customers dataset.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with customer order counts and a flag indicating if the customer is repeated.
+    """
+    # Count the number of orders per customer
+    customer_order_count = df['customer_unique_id'].value_counts()
+
+    # Create a boolean series for customers with more than 1 order
+    repeated_customers = customer_order_count > 1
+
+    # Create a DataFrame with order counts and repeated customer status
+    repeated_customers_df = pd.DataFrame({
+        'customer_unique_id': customer_order_count.index,
+        'is_repeated_customer': repeated_customers.values
+    })
+
+    return repeated_customers_df
+
+
+def merge_and_clean(df1: pd.DataFrame, df2: pd.DataFrame, on: str, how: str) -> pd.DataFrame:
+    """
+    Merge two DataFrames on a specified column and remove rows with missing values.
+
+    Args:
+        df1 (pd.DataFrame): The first DataFrame to merge.
+        df2 (pd.DataFrame): The second DataFrame to merge.
+        on (str): The column name to merge on.
+        how (str): The type of merge to perform.
+
+    Returns:
+        pd.DataFrame: A DataFrame resulting from the merge, with rows containing missing values removed.
+    """
+    try:
+        # Perform the merge
+        new_df = df1.merge(df2, on=on, how=how)
+        
+        # Drop rows with missing values
+        new_df.dropna(axis=0, inplace=True)
+        
+        return new_df
+    
+    except KeyError as e:
+        raise ValueError(f"The column '{on}' is missing in one or both DataFrames.") from e
+    
+    except Exception as e:
+        raise Exception("An unexpected error occurred during the merge or cleaning process.") from e
+
+
+def create_modelling_dataset(
+        customers_df:pd.DataFrame, 
+        orders_df:pd.DataFrame,
+        reviews_df:pd.DataFrame,
+        items_df:pd.DataFrame,
+        products_df:pd.DataFrame,
+        repeated_customers_df:pd.DataFrame):
+    
+    # Merge customers and orders together
+    modelling_df = merge_and_clean(customers_df, orders_df, on='customer_id', how='left')
+    
+    # Define the aggregation functions for the reviews dataset
+    agg_reviews_func = {
+        'review_id': 'first',
+        'review_score': 'mean'
+    }
+
+    # Aggregate the reviews dataset
+    agg_reviews_df = aggregate_by_column(reviews_df, column='order_id', agg=agg_reviews_func)
+
+    # Merge the current modeling dataset with the aggregated reviews
+    modelling_df = merge_and_clean(modelling_df, agg_reviews_df, on='order_id', how='left')
+        
+    # Merge the items dataset with the products dataset
+    items_products_df = merge_and_clean(items_df, products_df, on='product_id', how='left')
+
+    # Define the aggregation functions for the merged items and dataset
+    agg_items_products_func = {
+        'product_weight_g': 'median',
+        'product_length_cm': 'median',
+        'product_height_cm': 'median',
+        'product_width_cm': 'median',
+        'product_category_name': lambda x: x.mode().iloc[0] if not x.mode().empty else None
+    }
+
+    # Aggregate the items and products dataset
+    agg_items_products_df = aggregate_by_column(
+        items_products_df, 
+        column='order_id', 
+        agg=agg_items_products_func
+    )
+
+    # Rename the columns in the items and products dataset
+    agg_items_products_df.rename(
+        columns={
+            'product_weight_g': 'median_product_weight_g',
+            'product_length_cm': 'median_product_length_cm',
+            'product_height_cm': 'median_product_height_cm',
+            'product_width_cm': 'median_product_width_cm',
+            'product_category_name': 'mode_product_category_name'
+        },
+        inplace=True
+    )
+
+    # Merge the modeling dataset with agg_items_products_df
+    modelling_df = merge_and_clean(modelling_df, agg_items_products_df, on='order_id', how='left')
+
+    # Merge with repeated_customers_df
+    modelling_df = merge_and_clean(modelling_df, repeated_customers_df, on='customer_unique_id', how='left')
+
+    return modelling_df
+
+def feature_selection(df: pd.DataFrame, features: List[str]):
+    """
+    Selects features to be used in modelling.
     
     Args:
         df (pd.DataFrame): The input DataFrame.
-        numerical_cols (List[str]): The list of numerical features in the DataFrame.
-        categorical_cols (List[str]): The list of categorical features in the DataFrame.
+        features (List): The selected columns to be used in modelling.
 
     Returns:
-        feature_encoded_df (pd.DataFrame): The DataFrame after feature encoding and standardisation.
+        pd.DataFrame: The feature selected Dataframe
     """
     try:
-        # Combine the numerical and categorical column lists
-        columns = numerical_cols + categorical_cols
+        # Check if columns exist in the DataFrame
+        missing_columns = [col for col in features if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Columns not found in the DataFrame: {', '.join(missing_columns)}")
+        
+        # Initialise a new dataframe
+        feature_engineered_df = df.copy()
+        
+        # Add a new column for family size
+        feature_engineered_df = df[features]
 
-        # Check if all columns are included in the standardisation and encoding
-        if set(columns) != set(df.columns):
-            raise ValueError(f"Not all columns were included: {ve}")
-
-        # Initialize encoders and scalers
-        one_hot_encoder = OneHotEncoder(sparse_output=False, drop='first')
-        scaler = StandardScaler()
-
-        # Process categorical columns
-        encoded_categorical_data = one_hot_encoder.fit_transform(df[categorical_cols])
-        encoded_categorical_df = pd.DataFrame(
-            encoded_categorical_data, 
-            columns=one_hot_encoder.get_feature_names_out(categorical_cols),
-            index=df.index
-        )
-
-        # Process numerical columns
-        scaled_numerical_data = scaler.fit_transform(df[numerical_cols])
-        scaled_numerical_df = pd.DataFrame(
-            scaled_numerical_data,
-            columns=numerical_cols,
-            index=df.index
-        )
-
-        # Combine the processed data 
-        feature_encoded_df = pd.concat([scaled_numerical_df, encoded_categorical_df], axis=1)
-        return feature_encoded_df
+        return feature_engineered_df
     
     except ValueError as ve:
         # Show error
         print(f"ValueError: {ve}")
         return df
-    
+
     except Exception as e:
-        # Show the error
+        # Show error
         print(f"An unexpected error occurred: {e}")
-        return df
-    
+        return 
