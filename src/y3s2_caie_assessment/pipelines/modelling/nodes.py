@@ -1,16 +1,16 @@
 import pandas as pd
 import datetime as datetime
-from typing import List, Dict
+from typing import List
 import numpy as np
 import lightgbm as lgb
+import matplotlib.pyplot as plt
 
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold, GridSearchCV
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, roc_curve, auc
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.pipeline import Pipeline
 
 
 
@@ -111,9 +111,6 @@ def train_random_forest(X_train, y_train, model_params, kfold_params):
                           shuffle=kfold_params['shuffle'], 
                           random_state=kfold_params['random_state'])
     
-    skf = StratifiedKFold(n_splits=kfold_params['outer_folds'], 
-                          shuffle=kfold_params['shuffle'], 
-                          random_state=kfold_params['random_state'])
     models = []
     val_metrics = {"accuracy": [], "f1": [], "precision": [], "recall": []}
 
@@ -122,7 +119,7 @@ def train_random_forest(X_train, y_train, model_params, kfold_params):
         y_fold_train, y_fold_val = y_train.iloc[train_idx], y_train.iloc[val_idx]
         
         # Apply random under-sampling to the training data
-        X_fold_train, y_fold_train = rus.fit_resample(X_fold_train, y_fold_train)
+        # X_fold_train, y_fold_train = rus.fit_resample(X_fold_train, y_fold_train)
         
         model = RandomForestClassifier(**model_params)
         model.fit(X_fold_train, y_fold_train)
@@ -131,9 +128,9 @@ def train_random_forest(X_train, y_train, model_params, kfold_params):
 
         # Calculate the metrics for the validation
         acc = accuracy_score(y_fold_val, val_pred)
-        f1 = f1_score(y_fold_val, val_pred, average="weighted")
-        precision = precision_score(y_fold_val, val_pred, average="weighted")
-        recall = recall_score(y_fold_val, val_pred, average="weighted")
+        f1 = f1_score(y_fold_val, val_pred, average="macro")
+        precision = precision_score(y_fold_val, val_pred, average="macro")
+        recall = recall_score(y_fold_val, val_pred, average="macro")
 
         # Store the metrics
         val_metrics["accuracy"].append(acc)
@@ -201,22 +198,15 @@ def optimize_random_forest(X_train, y_train, model_params, kfold_params, grid_pa
         grid_params (dict): Parameters for the grid search
         upstream_agg_val_metrics (pd.DataFrame): The dataframe to add the validation metrics to.
     """
-    # Initialize RandomUnderSampler
-    rus = RandomUnderSampler(sampling_strategy='auto', random_state=42)
 
     # Initialise the Kfold Splitter
     skf = StratifiedKFold(n_splits=kfold_params['outer_folds'], 
                           shuffle=kfold_params['shuffle'], 
                           random_state=kfold_params['random_state'])
     
-    # Create the pipeline to ensure that RUS is applied inside the grid search
-    pipeline = Pipeline([
-        ('rus', rus),
-        ('rf', RandomForestClassifier(**model_params))
-    ])
 
     grid_search = GridSearchCV(
-        estimator=pipeline,
+        estimator=RandomForestClassifier(**model_params),
         param_grid=grid_params,
         scoring="recall",
         cv=StratifiedKFold(n_splits=kfold_params["inner_folds"], shuffle=True, random_state=kfold_params["random_state"]),
@@ -240,9 +230,9 @@ def optimize_random_forest(X_train, y_train, model_params, kfold_params, grid_pa
 
         # Calculate the metrics for the validation
         acc = accuracy_score(y_fold_val, val_pred)
-        f1 = f1_score(y_fold_val, val_pred, average="weighted")
-        precision = precision_score(y_fold_val, val_pred, average="weighted")
-        recall = recall_score(y_fold_val, val_pred, average="weighted")
+        f1 = f1_score(y_fold_val, val_pred, average="macro")
+        precision = precision_score(y_fold_val, val_pred, average="macro")
+        recall = recall_score(y_fold_val, val_pred, average="macro")
 
         # Store the metrics
         val_metrics["accuracy"].append(acc)
@@ -323,7 +313,7 @@ def train_lightgbm(X_train, y_train, model_params, kfold_params, upstream_agg_va
         y_fold_train, y_fold_val = y_train.iloc[train_idx], y_train.iloc[val_idx]
         
         # Apply random under-sampling to the training data
-        X_fold_train, y_fold_train = rus.fit_resample(X_fold_train, y_fold_train)
+        # X_fold_train, y_fold_train = rus.fit_resample(X_fold_train, y_fold_train)
 
         
         model = lgb.LGBMClassifier(**model_params)
@@ -334,9 +324,9 @@ def train_lightgbm(X_train, y_train, model_params, kfold_params, upstream_agg_va
 
         # Calculate the metrics for the validation
         acc = accuracy_score(y_fold_val, val_pred)
-        f1 = f1_score(y_fold_val, val_pred, average="weighted")
-        precision = precision_score(y_fold_val, val_pred, average="weighted")
-        recall = recall_score(y_fold_val, val_pred, average="weighted")
+        f1 = f1_score(y_fold_val, val_pred, average="macro")
+        precision = precision_score(y_fold_val, val_pred, average="macro")
+        recall = recall_score(y_fold_val, val_pred, average="macro")
 
         # Store the metrics
         val_metrics["accuracy"].append(acc)
@@ -409,22 +399,14 @@ def optimize_lightgbm(X_train, y_train, model_params, kfold_params, grid_params,
         upstream_agg_val_metrics (pd.DataFrame): The dataframe to add the validation metrics to.
         
     """
-    # Initialize RandomUnderSampler
-    rus = RandomUnderSampler(sampling_strategy='auto', random_state=42)
     
     # Initialise the Kfold Splitter
     skf = StratifiedKFold(n_splits=kfold_params['outer_folds'], 
                           shuffle=kfold_params['shuffle'], 
                           random_state=kfold_params['random_state'])
 
-    # Create the pipeline to ensure that RUS is applied inside the grid search
-    pipeline = Pipeline([
-        ('rus', rus),
-        ('rf', lgb.LGBMClassifier(**model_params))
-    ])
-
     grid_search = GridSearchCV(
-        estimator=pipeline,
+        estimator=lgb.LGBMClassifier(**model_params),
         param_grid=grid_params,
         scoring="recall",
         cv=StratifiedKFold(n_splits=kfold_params["inner_folds"], shuffle=True, random_state=kfold_params["random_state"]),
@@ -448,9 +430,9 @@ def optimize_lightgbm(X_train, y_train, model_params, kfold_params, grid_params,
 
         # Calculate the metrics for the validation
         acc = accuracy_score(y_fold_val, val_pred)
-        f1 = f1_score(y_fold_val, val_pred, average="weighted")
-        precision = precision_score(y_fold_val, val_pred, average="weighted")
-        recall = recall_score(y_fold_val, val_pred, average="weighted")
+        f1 = f1_score(y_fold_val, val_pred, average="macro")
+        precision = precision_score(y_fold_val, val_pred, average="macro")
+        recall = recall_score(y_fold_val, val_pred, average="macro")
 
         # Store the metrics
         val_metrics["accuracy"].append(acc)
@@ -530,7 +512,7 @@ def train_lr(X_train, y_train, model_params, kfold_params, upstream_agg_val_metr
         y_fold_train, y_fold_val = y_train.iloc[train_idx], y_train.iloc[val_idx]
         
         # Apply random under-sampling to the training data
-        X_fold_train, y_fold_train = rus.fit_resample(X_fold_train, y_fold_train)
+        # X_fold_train, y_fold_train = rus.fit_resample(X_fold_train, y_fold_train)
         
         model = LogisticRegression(**model_params)
         model.fit(X_fold_train, y_fold_train)
@@ -613,22 +595,14 @@ def optimize_lr(X_train, y_train, model_params, kfold_params, grid_params, upstr
         upstream_agg_val_metrics (pd.DataFrame): The dataframe to add the validation metrics to.
         
     """
-    # Initialize RandomUnderSampler
-    rus = RandomUnderSampler(sampling_strategy='auto', random_state=42)
     
     # Initialise the Kfold Splitter
     skf = StratifiedKFold(n_splits=kfold_params['outer_folds'], 
                           shuffle=kfold_params['shuffle'], 
                           random_state=kfold_params['random_state'])
-    
-    # Create the pipeline to ensure that RUS is applied inside the grid search
-    pipeline = Pipeline([
-        ('rus', rus),
-        ('rf', LogisticRegression(**model_params))
-    ])
 
     grid_search = GridSearchCV(
-        estimator=pipeline,
+        estimator=LogisticRegression(**model_params),
         param_grid=grid_params,
         scoring="recall",
         cv=StratifiedKFold(n_splits=kfold_params["inner_folds"], shuffle=True, random_state=kfold_params["random_state"]),
@@ -755,12 +729,13 @@ def test_models(X_test, y_test,
 
         # Predict on test data
         y_pred = model.predict(X_test)
+        y_pred_prob = model.predict_proba(X_test)[:, 1]
 
         # Calculate metrics
         accuracy = accuracy_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred, average='weighted')
-        precision = precision_score(y_test, y_pred, average='weighted')
-        recall = recall_score(y_test, y_pred, average='weighted')
+        f1 = f1_score(y_test, y_pred, average='macro')
+        precision = precision_score(y_test, y_pred, average='macro')
+        recall = recall_score(y_test, y_pred, average='macro')
 
         # Print the classification report
         print(f"\nClassification report for {model_name}:\n")
@@ -774,6 +749,23 @@ def test_models(X_test, y_test,
             "Precision": precision,
             "Recall": recall
         })
+
+        # Calculate ROC curve and AUC (for binary classification, use `y_test` and `y_pred_prob`)
+        fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
+        roc_auc = auc(fpr, tpr)
+
+        # Plot ROC curve
+        plt.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc:.2f})')
+
+    # Add plot details
+    plt.plot([0, 1], [0, 1], 'k--', label='Random Classifier (AUC = 0.5)')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc='lower right')
+
+    # Show plot
+    plt.show()
 
     # Convert test results to DataFrame
     test_results_df = pd.DataFrame(test_results)
@@ -799,13 +791,16 @@ def make_prediction(
     inference_unoptimized_lr_df = df.copy()
     inference_optimized_lr_df = df.copy()
 
+    # Drop the label in the encoded dataset
+    encoded_df = encoded_df.drop('is_repeated_customer', axis=1, errors='ignore')
+
     # Make predictions using each model
-    inference_unoptimized_rf_df['survived_prediction'] = unoptimized_rf_model.predict(encoded_df)
-    inference_optimized_rf_df['survived_prediction'] = optimized_rf_model.predict(encoded_df)
-    inference_unoptimized_lightbgm_df['survived_prediction'] = unoptimized_lightbgm_model.predict(encoded_df)
-    inference_optimized_lightbgm_df['survived_prediction'] = optimized_lightbgm_model.predict(encoded_df)
-    inference_unoptimized_lr_df['survived_prediction'] = unoptimized_lr_model.predict(encoded_df)
-    inference_optimized_lr_df['survived_prediction'] = optimized_lr_model.predict(encoded_df)
+    inference_unoptimized_rf_df['is_repeated_customer'] = unoptimized_rf_model.predict(encoded_df)
+    inference_optimized_rf_df['is_repeated_customer'] = optimized_rf_model.predict(encoded_df)
+    inference_unoptimized_lightbgm_df['is_repeated_customer'] = unoptimized_lightbgm_model.predict(encoded_df)
+    inference_optimized_lightbgm_df['is_repeated_customer'] = optimized_lightbgm_model.predict(encoded_df)
+    inference_unoptimized_lr_df['is_repeated_customer'] = unoptimized_lr_model.predict(encoded_df)
+    inference_optimized_lr_df['is_repeated_customer'] = optimized_lr_model.predict(encoded_df)
     
     return {
         "inference_unoptimized_rf_df": inference_unoptimized_rf_df,

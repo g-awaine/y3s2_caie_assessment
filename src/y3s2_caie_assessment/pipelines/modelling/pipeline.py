@@ -90,4 +90,4 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="make_prediction"
             )
         ]
-)
+    )

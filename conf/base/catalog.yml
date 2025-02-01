@@ -136,3 +136,30 @@ inference_unoptimized_lr_df:
 inference_optimized_lr_df:
   type: pandas.CSVDataset
   filepath: data/10_inference/inference_optimized_lr_df.csv
+
+
+  # Models
+unoptimized_rf_model:
+  type: kedro_datasets.pickle.PickleDataset
+  filepath: models/unoptimized_rf_model.pkl
+
+optimized_rf_model:
+  type: kedro_datasets.pickle.PickleDataset
+  filepath: models/optimized_rf_model.pkl
+
+unoptimized_lightbgm_model:
+  type: kedro_datasets.pickle.PickleDataset
+  filepath: models/unoptimized_lightbgm_model.pkl
+
+optimized_lightbgm_model:
+  type: kedro_datasets.pickle.PickleDataset
+  filepath: models/optimized_lightbgm_model.pkl
+
+unoptimized_lr_model:
+  type: kedro_datasets.pickle.PickleDataset
+  filepath: models/unoptimized_lr_model.pkl
+
+optimized_lr_model:
+  type: kedro_datasets.pickle.PickleDataset
+  filepath: models/optimized_lr_model.pkl
+
